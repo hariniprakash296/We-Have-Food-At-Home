@@ -1,7 +1,7 @@
 # We Have Food At Home
 ## Purpose:
 A website that generates Meal Plans accordding to the user's specific dietary requirements and cuisine preference.
-This is the project I took up 2 repos ago that became messy unclean so I decided to revamp the code abt 1.5 months ago but forgot to commit in github till now.
+This is the project I took up 2 repos ago that became messy so I decided to revamp the code abt 1.5 months ago but forgot to commit in github till now.
 
 Currently working on displaying images in the four placeholders below using V0 after which I'll probably switch back to cursor for bigger changes
 
