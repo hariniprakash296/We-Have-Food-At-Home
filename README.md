@@ -1,30 +1,9 @@
-# Dynamic Recipe Search
+# We Have Food At Home
+## Purpose:
+A website that generates Meal Plans accordding to the user's specific dietary requirements and cuisine preference.
+This is the project I took up 2 repos ago that became messy unclean so I decided to revamp the code abt 1.5 months ago but forgot to commit in github till now.
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+Currently working on displaying images in the four placeholders below using V0 after which I'll probably switch back to cursor for bigger changes
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/hariniprakash296s-projects/v0-dynamic-recipe-search)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/psXkjvz4HcR)
+![image](https://github.com/user-attachments/assets/4294195b-9996-4c07-92f6-2b7c6f732094)
 
-## Overview
-
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
-
-## Deployment
-
-Your project is live at:
-
-**[https://vercel.com/hariniprakash296s-projects/v0-dynamic-recipe-search](https://vercel.com/hariniprakash296s-projects/v0-dynamic-recipe-search)**
-
-## Build your app
-
-Continue building your app on:
-
-**[https://v0.dev/chat/projects/psXkjvz4HcR](https://v0.dev/chat/projects/psXkjvz4HcR)**
-
-## How It Works
-
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
