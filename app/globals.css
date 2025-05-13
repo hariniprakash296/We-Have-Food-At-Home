@@ -1,0 +1,122 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 
+  Main stylesheet for the Recipe Finder application
+  This file contains global styles, variables, and Tailwind CSS imports
+*/
+
+/* 
+  Define CSS variables for the application
+  These variables can be used throughout the application for consistent styling
+*/
+@layer base {
+  :root {
+    /* Light theme variables */
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Dark theme variables */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 240 5% 10%;
+    --card-foreground: 0 0% 100%;
+    --popover: 240 5% 10%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 240 5% 26%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 240 5% 26%;
+    --muted-foreground: 0 0% 70%;
+    --accent: 240 5% 26%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 5% 26%;
+    --input: 240 5% 26%;
+    --ring: 240 4.9% 83.9%;
+  }
+}
+
+/* 
+  Apply base styles to the entire application
+  These styles ensure consistent appearance across all pages
+*/
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Style headings */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-bold;
+  }
+
+  /* Style links */
+  a {
+    @apply hover:underline;
+  }
+}
+
+/* 
+  Custom component styles
+  These styles can be applied using @apply directives or class names
+*/
+@layer components {
+  /* Recipe card styling */
+  .recipe-card {
+    @apply overflow-hidden bg-card border-border text-card-foreground rounded-md transition-all duration-200;
+  }
+
+  .recipe-card:hover {
+    @apply shadow-lg transform translate-y-[-4px];
+  }
+
+  /* Tag styling for dietary information */
+  .dietary-tag {
+    @apply px-2 py-1 rounded-full text-xs inline-block;
+    background: linear-gradient(to right, #c4b5fd, #fcd9bd, #fef3c7);
+    color: #4b5563;
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
+  }
+
+  /* Search container styling */
+  .search-container {
+    @apply flex flex-col items-center w-full max-w-6xl mx-auto;
+  }
+
+  /* Loading spinner */
+  .loading-spinner {
+    @apply animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary;
+  }
+}
