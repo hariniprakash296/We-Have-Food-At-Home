@@ -1,3 +1,9 @@
+// Add Edge runtime configuration at the top of the file:
+
+export const runtime = "edge"
+
+// This will deploy your API route to the Edge network, reducing latency
+
 /**
  * Search API Route
  *
@@ -117,180 +123,158 @@ export async function POST(req: Request) {
 
     // 3. Check cache using stale-while-revalidate
     const cacheKey = normalizeQuery(query)
-    const now = Date.now()
-    const cachedResponse = responseCache.get(cacheKey)
+    const fetchFreshData = async () => {
+      // All the API call logic goes here
+      // Copy the existing API call code from the current implementation
+      // and return the cleanedResponse
 
-    if (cachedResponse && cachedResponse.expiry > now) {
-      console.log("Cache hit for query:", cacheKey)
-      // Return cached response with rate limit headers
+      const apiKey = process.env.DEEPSEEK_API_KEY
+      if (!apiKey) {
+        throw new Error("Search service is not properly configured")
+      }
+
+      // 5. Format the message for the Deepseek API with optimized prompt
+      // More concise prompt that emphasizes relevance to the query
+      const messages = [
+        {
+          role: "system",
+          content: `Generate 3 recipes matching user criteria. Format as JSON array:
+  [
+    {
+      "id": "1",
+      "title": "Recipe Title",
+      "description": "Brief description",
+      "ingredients": ["ingredient 1", "ingredient 2"],
+      "instructions": ["step 1", "step 2"],
+      "prepTime": "30 min",
+      "dietaryInfo": ["tag1", "tag2"],
+      "recipeType": "breakfast/lunch/dinner/appetizer"
+    }
+  ]
+  Return ONLY valid JSON.`,
+        },
+        {
+          role: "user",
+          content: `Generate 3 recipes for: ${query}`,
+        },
+      ]
+
+      // 6. Make the request to the Deepseek API
+      try {
+        console.log("Sending request to Deepseek API...")
+
+        const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: "deepseek-chat",
+            messages,
+            max_tokens: 1200, // Reduced from 1500
+            temperature: 0.3, // Reduced from 0.5 for more deterministic responses
+            presence_penalty: 0.0, // Reduced to minimize token usage
+            top_p: 0.8, // Add top_p to focus on more likely tokens
+          }),
+        })
+
+        // 7. Handle API response errors
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          console.error("Deepseek API error:", errorData)
+          throw new Error(`Failed to get response from Deepseek API: ${response.status} - ${JSON.stringify(errorData)}`)
+        }
+
+        // 8. Process successful response
+        const data = await response.json()
+        const responseText = data.choices?.[0]?.message?.content || "[]"
+
+        console.log("API Response:", responseText.substring(0, 100) + "...")
+
+        // 9. Clean and validate the response
+        const cleanedResponse = cleanJsonResponse(responseText)
+
+        try {
+          // Attempt to parse the cleaned response
+          const parsedResponse = JSON.parse(cleanedResponse)
+
+          // Check if it's an array with at least one item
+          if (!Array.isArray(parsedResponse) || parsedResponse.length === 0) {
+            console.error("Response is not a valid array or is empty")
+            throw new Error("The API did not return valid recipe data. Please try a different search query.")
+          }
+
+          return cleanedResponse
+        } catch (parseError) {
+          console.error("Failed to parse API response:", parseError)
+          throw new Error("Failed to parse recipe data from the API. Please try a different search query.")
+        }
+      } catch (apiError) {
+        console.error("API request error:", apiError)
+        throw new Error(
+          `Failed to get response from Deepseek API: ${apiError instanceof Error ? apiError.message : "Unknown error"}`,
+        )
+      }
+    }
+
+    let cleanedResponse = ""
+    try {
+      const { result, fromCache } = await staleWhileRevalidate(cacheKey, fetchFreshData)
+      cleanedResponse = result
+
+      // After cache check:
+      timings.cacheCheck = Date.now() - startTime - timings.rateLimit
+
+      // After API call:
+      timings.apiCall = Date.now() - startTime - timings.rateLimit - timings.cacheCheck
+
+      // After response processing:
+      timings.processing = Date.now() - startTime - timings.rateLimit - timings.cacheCheck - timings.apiCall
+
       return NextResponse.json(
-        { result: cachedResponse.result },
+        { result: cleanedResponse },
         {
           headers: {
             "X-RateLimit-Limit": RATE_LIMIT.toString(),
             "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
             "X-RateLimit-Reset": rateLimitResult.resetTime.toString(),
-            "X-Cache": "HIT",
+            "X-Cache": fromCache ? "HIT" : "MISS",
             "X-Timing-Total": (Date.now() - startTime).toString(),
+            "X-Timing-RateLimit": timings.rateLimit.toString(),
+            "X-Timing-CacheCheck": timings.cacheCheck.toString(),
+            "X-Timing-ApiCall": timings.apiCall.toString(),
+            "X-Timing-Processing": timings.processing.toString(),
           },
         },
       )
-    }
+    } catch (error) {
+      console.error("API request error:", error)
 
-    console.log("Cache miss for query:", cacheKey)
-
-    // After cache check:
-    timings.cacheCheck = Date.now() - startTime - timings.rateLimit
-
-    // 4. Check API key configuration
-    const apiKey = process.env.DEEPSEEK_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: "Search service is not properly configured" }, { status: 500 })
-    }
-
-    // 5. Format the message for the Deepseek API with optimized prompt
-    // More concise prompt that emphasizes relevance to the query
-    const messages = [
-      {
-        role: "system",
-        content: `Generate 4 recipe variations that CLOSELY match the user's criteria. 
-        
-        Each recipe should maintain the core elements requested but vary in:
-        - Secondary ingredients or preparation methods
-        - Flavor profiles or seasonings
-        - Cooking techniques
-        
-        IMPORTANT: All recipes MUST directly address the user's specific request.
-        
-        Return a JSON array with this structure:
-        [
-          {
-            "id": "1",
-            "title": "Recipe Title",
-            "description": "Brief description",
-            "ingredients": ["ingredient 1", "ingredient 2"],
-            "instructions": ["step 1", "step 2"],
-            "prepTime": "30 min",
-            "dietaryInfo": ["tag1", "tag2"],
-            "recipeType": "breakfast/lunch/dinner/appetizer"
-          }
-        ]
-        
-        Return ONLY the JSON array.`,
-      },
-      {
-        role: "user",
-        content: `Generate 4 recipe variations that match these criteria: ${query}
-        
-        Remember to stay focused on the core request while providing interesting variations.`,
-      },
-    ]
-
-    // 6. Make the request to the Deepseek API
-    try {
-      console.log("Sending request to Deepseek API...")
-
-      const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: "deepseek-chat",
-          messages,
-          max_tokens: 1200,
-          temperature: 0.3,
-          presence_penalty: 0.0,
-          top_p: 0.8,
-        }),
-      })
+      // After cache check:
+      timings.cacheCheck = Date.now() - startTime - timings.rateLimit
 
       // After API call:
       timings.apiCall = Date.now() - startTime - timings.rateLimit - timings.cacheCheck
 
-      // 7. Handle API response errors
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        console.error("Deepseek API error:", errorData)
-        return NextResponse.json(
-          {
-            error: "Failed to get response from Deepseek API",
-            details: errorData,
-          },
-          { status: response.status },
-        )
-      }
+      // After response processing:
+      timings.processing = Date.now() - startTime - timings.rateLimit - timings.cacheCheck - timings.apiCall
 
-      // 8. Process successful response
-      const data = await response.json()
-      const responseText = data.choices?.[0]?.message?.content || "[]"
-
-      console.log("API Response:", responseText.substring(0, 100) + "...")
-
-      // 9. Clean and validate the response
-      const cleanedResponse = cleanJsonResponse(responseText)
-
-      try {
-        // Attempt to parse the cleaned response
-        const parsedResponse = JSON.parse(cleanedResponse)
-
-        // Check if it's an array with at least one item
-        if (!Array.isArray(parsedResponse) || parsedResponse.length === 0) {
-          console.error("Response is not a valid array or is empty")
-          return NextResponse.json(
-            { error: "The API did not return valid recipe data. Please try a different search query." },
-            { status: 500 },
-          )
-        }
-
-        // 10. Cache the successful response
-        responseCache.set(cacheKey, {
-          result: cleanedResponse,
-          expiry: now + CACHE_TTL,
-        })
-
-        // Periodically clean up expired cache entries (simple approach)
-        if (Math.random() < 0.1) {
-          // 10% chance on each request
-          cleanExpiredCache()
-        }
-
-        // After response processing:
-        timings.processing = Date.now() - startTime - timings.rateLimit - timings.cacheCheck - timings.apiCall
-
-        // Return the validated result
-        return NextResponse.json(
-          { result: cleanedResponse },
-          {
-            headers: {
-              "X-RateLimit-Limit": RATE_LIMIT.toString(),
-              "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
-              "X-RateLimit-Reset": rateLimitResult.resetTime.toString(),
-              "X-Cache": "MISS",
-              "X-Timing-Total": (Date.now() - startTime).toString(),
-              "X-Timing-RateLimit": timings.rateLimit.toString(),
-              "X-Timing-CacheCheck": timings.cacheCheck.toString(),
-              "X-Timing-ApiCall": timings.apiCall.toString(),
-              "X-Timing-Processing": timings.processing.toString(),
-            },
-          },
-        )
-      } catch (parseError) {
-        console.error("Failed to parse API response:", parseError)
-        return NextResponse.json(
-          { error: "Failed to parse recipe data from the API. Please try a different search query." },
-          { status: 500 },
-        )
-      }
-    } catch (apiError) {
-      console.error("API request error:", apiError)
       return NextResponse.json(
         {
-          error: "Failed to get response from Deepseek API",
-          details: apiError instanceof Error ? apiError.message : "Unknown error",
+          error: "Failed to get search results",
+          details: error instanceof Error ? error.message : "Unknown error",
         },
-        { status: 500 },
+        {
+          status: 500,
+          headers: {
+            "X-Timing-Total": (Date.now() - startTime).toString(),
+            "X-Timing-RateLimit": timings.rateLimit.toString(),
+            "X-Timing-CacheCheck": timings.cacheCheck.toString(),
+            "X-Timing-ApiCall": timings.apiCall.toString(),
+            "X-Timing-Processing": timings.processing.toString(),
+          },
+        },
       )
     }
   } catch (error) {
@@ -333,4 +317,53 @@ function cleanJsonResponse(jsonString: string): string {
   }
 
   return cleaned
+}
+
+/**
+ * Implements a stale-while-revalidate pattern for cache
+ * Returns cached data immediately while updating cache in background
+ * @param cacheKey - The cache key
+ * @param fetchFn - The function to fetch fresh data
+ * @returns Promise resolving to the data
+ */
+async function staleWhileRevalidate(cacheKey: string, fetchFn: () => Promise<string>) {
+  const now = Date.now()
+  const cachedResponse = responseCache.get(cacheKey)
+
+  // If we have a valid cache entry, use it
+  if (cachedResponse) {
+    // If cache is fresh, just return it
+    if (cachedResponse.expiry > now) {
+      return { result: cachedResponse.result, fromCache: true }
+    }
+
+    // If cache is stale but not too old (within 2x TTL), use it but revalidate
+    if (cachedResponse.expiry > now - CACHE_TTL) {
+      // Revalidate cache in background
+      setTimeout(async () => {
+        try {
+          const freshResult = await fetchFn()
+          responseCache.set(cacheKey, {
+            result: freshResult,
+            expiry: Date.now() + CACHE_TTL,
+          })
+          console.log("Cache revalidated for:", cacheKey)
+        } catch (error) {
+          console.error("Cache revalidation failed:", error)
+        }
+      }, 0)
+
+      // Return stale data immediately
+      return { result: cachedResponse.result, fromCache: true }
+    }
+  }
+
+  // No valid cache, fetch fresh data
+  const freshResult = await fetchFn()
+  responseCache.set(cacheKey, {
+    result: freshResult,
+    expiry: now + CACHE_TTL,
+  })
+
+  return { result: freshResult, fromCache: false }
 }
