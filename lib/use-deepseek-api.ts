@@ -136,7 +136,7 @@ export function useDeepseekApi() {
       const progressInterval = setInterval(() => {
         setLoadingProgress((prev) => {
           // Gradually increase progress, but never reach 100% until complete
-          const newProgress = prev + (100 - prev) * 0.1
+          const newProgress = prev + (100 - prev) * 0.05
           return Math.min(newProgress, 95)
         })
       }, 300)
@@ -144,7 +144,7 @@ export function useDeepseekApi() {
       try {
         // Make API request to the search endpoint
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 78000) // 78 second timeout to avoid race condition
 
         const response = await fetch("/api/search", {
           method: "POST",
@@ -193,6 +193,10 @@ export function useDeepseekApi() {
         return data
       } catch (error) {
         console.error("API request error:", error)
+        // Add specific handling for aborted requests
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new Error("Request timed out. Please try again.")
+        }
         // Re-throw the error to be handled by the caller
         throw error
       } finally {

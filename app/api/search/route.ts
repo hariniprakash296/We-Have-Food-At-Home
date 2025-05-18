@@ -1,6 +1,8 @@
 // Add Edge runtime configuration at the top of the file:
-
 export const runtime = "edge"
+export const preferredRegion = "auto"
+export const dynamic = "force-dynamic"
+export const maxDuration = 25 // Reduced from 30 seconds
 
 // This will deploy your API route to the Edge network, reducing latency
 
@@ -14,12 +16,6 @@ export const runtime = "edge"
 import { NextResponse } from "next/server"
 import { headers } from "next/headers"
 import { rateLimit, getResetTimeString } from "@/lib/rate-limiter"
-
-/**
- * Maximum duration for the API route execution (in seconds)
- * This allows responses up to 30 seconds to accommodate longer API calls
- */
-export const maxDuration = 30
 
 /**
  * Maximum number of requests allowed per IP address within the rate limit duration
@@ -38,12 +34,11 @@ interface CacheEntry {
 // In-memory cache with 24-hour TTL
 const responseCache = new Map<string, CacheEntry>()
 
-// Cache TTL in milliseconds (24 hours)
-const CACHE_TTL = 24 * 60 * 60 * 1000
+// Cache TTL in milliseconds (12 hours instead of 24)
+const CACHE_TTL = 12 * 60 * 60 * 1000
 
 /**
  * Normalize a query string for cache key generation
- * Removes extra spaces, converts to lowercase, and sorts filter terms
  * @param query - The query string to normalize
  * @returns Normalized query string for consistent cache keys
  */
@@ -56,16 +51,22 @@ function normalizeQuery(query: string): string {
       .replace(/with dietary preferences: .+$/i, "")
       .trim()
       .toLowerCase()
+      .replace(/\s+/g, " ") // Normalize whitespace
+      .replace(/[^\w\s]/g, "") // Remove special characters
     const filterTerms = filterMatch[1]
       .split(",")
       .map((term) => term.trim().toLowerCase())
       .sort()
-      .join(", ")
-    return `${mainQuery} with dietary preferences: ${filterTerms}`
+      .join(",")
+    return `${mainQuery}:${filterTerms}`
   }
 
   // If no filter terms, just normalize the query
-  return query.trim().toLowerCase()
+  return query
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ") // Normalize whitespace
+    .replace(/[^\w\s]/g, "") // Remove special characters
 }
 
 /**
@@ -172,17 +173,25 @@ export async function POST(req: Request) {
           body: JSON.stringify({
             model: "deepseek-chat",
             messages,
-            max_tokens: 1200, // Reduced from 1500
-            temperature: 0.3, // Reduced from 0.5 for more deterministic responses
-            presence_penalty: 0.0, // Reduced to minimize token usage
-            top_p: 0.8, // Add top_p to focus on more likely tokens
+            max_tokens: 1000, // Balanced for quality and speed
+            temperature: 0.3, // Keep some creativity while maintaining speed
+            presence_penalty: 0.0,
+            top_p: 0.85, // Slightly higher for better quality
+            frequency_penalty: -0.1, // Reduce redundancy
+            stream: false, // Ensure non-streaming for faster complete response
+            response_format: { type: "json_object" } // Enforce JSON formatting
           }),
         })
 
         // 7. Handle API response errors
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}))
-          console.error("Deepseek API error:", errorData)
+          console.error("Deepseek API error:", {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorData,
+            query,
+          })
           throw new Error(`Failed to get response from Deepseek API: ${response.status} - ${JSON.stringify(errorData)}`)
         }
 
@@ -237,7 +246,7 @@ export async function POST(req: Request) {
         {
           headers: {
             "X-RateLimit-Limit": RATE_LIMIT.toString(),
-            "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+            "X-RateLimit-Remaining": rateLimitResult.remaining?.toString() ?? "0",
             "X-RateLimit-Reset": rateLimitResult.resetTime.toString(),
             "X-Cache": fromCache ? "HIT" : "MISS",
             "X-Timing-Total": (Date.now() - startTime).toString(),

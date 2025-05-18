@@ -8,7 +8,7 @@
 
 "use client"
 
-import { createContext, useContext, useState, useCallback, useMemo, type ReactNode, useEffect } from "react"
+import * as React from "react"
 import { useDeepseekApi } from "@/lib/use-deepseek-api"
 import type { Recipe } from "@/components/recipe-card"
 
@@ -16,46 +16,52 @@ import type { Recipe } from "@/components/recipe-card"
  * Interface defining the shape of the search context
  */
 interface SearchContextType {
-  query: string // The current search query
-  recipes: Recipe[] // The parsed recipes
-  loading: boolean // Whether a search is in progress
-  loadingProgress: number // Loading progress (0-100%)
-  error: string | null // Any error that occurred during search
-  hasSearched: boolean // Whether a search has been performed
-  selectedFilters: string[] // Selected filter IDs
-  setQuery: (query: string) => void // Function to update the query
-  performSearch: (searchQuery: string) => Promise<void> // Function to execute a search
-  setSelectedFilters: (filters: string[]) => void // Function to update selected filters
-  getRecipeById: (id: string) => Recipe | undefined // Function to get a recipe by ID
+  searchQuery: string
+  setSearchQuery: (query: string) => void
+  recipes: Recipe[]
+  loading: boolean
+  loadingProgress: number
+  error: string | null
+  hasSearched: boolean
+  selectedFilters: string[]
+  setSelectedFilters: (filters: string[]) => void
+  performSearch: (searchQuery: string) => Promise<void>
+  getRecipeById: (id: string) => Recipe | undefined
 }
 
 /**
  * Create the context with default values
  */
-const SearchContext = createContext<SearchContextType>({
-  query: "",
+const SearchContext = React.createContext<SearchContextType>({
+  searchQuery: "",
+  setSearchQuery: () => {},
   recipes: [],
   loading: false,
   loadingProgress: 0,
   error: null,
   hasSearched: false,
   selectedFilters: [],
-  setQuery: () => {},
-  performSearch: async () => {},
   setSelectedFilters: () => {},
+  performSearch: async () => {},
   getRecipeById: () => undefined,
 })
 
 /**
  * Custom hook to use the search context
  */
-export const useSearch = () => useContext(SearchContext)
+export function useSearch() {
+  const context = React.useContext(SearchContext)
+  if (!context) {
+    throw new Error("useSearch must be used within a SearchProvider")
+  }
+  return context
+}
 
 /**
  * Props for the SearchProvider component
  */
 interface SearchProviderProps {
-  children: ReactNode // Child components that will have access to the context
+  children: React.ReactNode // Child components that will have access to the context
 }
 
 /**
@@ -63,43 +69,25 @@ interface SearchProviderProps {
  * This component provides the search context to its children
  */
 export function SearchProvider({ children }: SearchProviderProps) {
-  // State for the search query
-  const [query, setQuery] = useState("")
+  const [searchQuery, setSearchQuery] = React.useState("")
+  const [recipes, setRecipes] = React.useState<Recipe[]>([])
+  const [loading, setLoading] = React.useState(false)
+  const [loadingProgress, setLoadingProgress] = React.useState(0)
+  const [error, setError] = React.useState<string | null>(null)
+  const [hasSearched, setHasSearched] = React.useState(false)
+  const [selectedFilters, setSelectedFilters] = React.useState<string[]>([])
 
-  // State for the parsed recipes
-  const [recipes, setRecipes] = useState<Recipe[]>([])
-
-  // State for loading status
-  const [loading, setLoading] = useState(false)
-
-  // State for loading progress
-  const [loadingProgress, setLoadingProgress] = useState(0)
-
-  // State for error messages
-  const [error, setError] = useState<string | null>(null)
-
-  // State to track if a search has been performed
-  const [hasSearched, setHasSearched] = useState(false)
-
-  // State for selected filters
-  const [selectedFilters, setSelectedFilters] = useState<string[]>([])
-
-  // Use the deepseek API hook to get the search function and parser
   const { searchRecipes, parseRecipeData, isLoading, loadingProgress: apiLoadingProgress } = useDeepseekApi()
 
-  // Update loading progress from API
-  useEffect(() => {
+  React.useEffect(() => {
     setLoadingProgress(apiLoadingProgress)
   }, [apiLoadingProgress])
 
-  // Function to get a recipe by ID (from context or localStorage)
-  const getRecipeById = useCallback(
+  const getRecipeById = React.useCallback(
     (id: string): Recipe | undefined => {
-      // First try to find in current state
       const recipeFromState = recipes.find((r) => r.id === id)
       if (recipeFromState) return recipeFromState
 
-      // If not found in state, try localStorage
       try {
         const savedRecipes = localStorage.getItem("savedRecipes")
         if (savedRecipes) {
@@ -115,9 +103,7 @@ export function SearchProvider({ children }: SearchProviderProps) {
     [recipes],
   )
 
-  // Load saved recipes on initial mount
-  useEffect(() => {
-    // Try to load saved recipes from localStorage on component mount
+  React.useEffect(() => {
     const savedRecipes = localStorage.getItem("savedRecipes")
     const lastQuery = localStorage.getItem("lastSearchQuery")
 
@@ -125,7 +111,7 @@ export function SearchProvider({ children }: SearchProviderProps) {
       try {
         const parsedRecipes = JSON.parse(savedRecipes)
         setRecipes(parsedRecipes)
-        setQuery(lastQuery)
+        setSearchQuery(lastQuery)
         setHasSearched(true)
       } catch (error) {
         console.error("Error loading saved recipes:", error)
@@ -133,102 +119,74 @@ export function SearchProvider({ children }: SearchProviderProps) {
     }
   }, [])
 
-  // Save recipes to localStorage when they change
-  useEffect(() => {
-    // When recipes change and we have results, save to localStorage
+  React.useEffect(() => {
     if (recipes.length > 0) {
       try {
         localStorage.setItem("savedRecipes", JSON.stringify(recipes))
-        localStorage.setItem("lastSearchQuery", query)
+        localStorage.setItem("lastSearchQuery", searchQuery)
       } catch (error) {
         console.error("Error saving recipes to localStorage:", error)
       }
     }
-  }, [recipes, query])
+  }, [recipes, searchQuery])
 
-  /**
-   * Handle partial results for progressive loading
-   * @param partialRecipes - Partial recipe results
-   */
-  const handlePartialResults = useCallback((partialRecipes: Recipe[]) => {
+  const handlePartialResults = React.useCallback((partialRecipes: Recipe[]) => {
     if (partialRecipes.length > 0) {
       setRecipes(partialRecipes)
     }
   }, [])
 
-  /**
-   * Perform a search with the given query
-   * This function makes an API call to the search endpoint
-   * @param searchQuery - The query to search for
-   */
-  const performSearch = useCallback(
+  const performSearch = React.useCallback(
     async (searchQuery: string) => {
-      // Reset error state
       setError(null)
-
-      // Set loading state to true
       setLoading(true)
       setLoadingProgress(0)
 
       try {
-        // Build a combined query with filters
         let combinedQuery = searchQuery
 
         if (selectedFilters.length > 0) {
-          // Add filter terms to the query
           const filterTerms = selectedFilters.join(", ")
           combinedQuery = `${searchQuery} with dietary preferences: ${filterTerms}`
         }
 
-        // Use the searchRecipes function from the useDeepseekApi hook
-        // Pass the handlePartialResults callback for progressive loading
         const data = await searchRecipes(combinedQuery, handlePartialResults)
 
-        // Parse the recipe data
         const parsedRecipes = parseRecipeData(data.result)
 
-        // Check if we got valid recipes
         if (parsedRecipes.length === 0) {
           throw new Error("No recipes found. Please try a different search query.")
         }
 
-        // Set the recipes (may be redundant if handlePartialResults was called)
         setRecipes(parsedRecipes)
-
-        // Set hasSearched to true
         setHasSearched(true)
       } catch (err) {
         console.error("Search error:", err)
-        // Set error state
         setError(err instanceof Error ? err.message : "An unknown error occurred")
-
-        // Clear recipes on error
         setRecipes([])
       } finally {
-        // Set loading state to false
         setLoading(false)
       }
     },
     [searchRecipes, parseRecipeData, selectedFilters, handlePartialResults],
   )
 
-  // Create the context value using useMemo to prevent unnecessary re-renders
-  const contextValue = useMemo(
+  const value = React.useMemo(
     () => ({
-      query,
+      searchQuery,
+      setSearchQuery,
       recipes,
       loading: loading || isLoading,
       loadingProgress,
       error,
       hasSearched,
       selectedFilters,
-      setQuery,
-      performSearch,
       setSelectedFilters,
+      performSearch,
       getRecipeById,
     }),
     [
-      query,
+      searchQuery,
       recipes,
       loading,
       isLoading,
@@ -236,11 +194,11 @@ export function SearchProvider({ children }: SearchProviderProps) {
       error,
       hasSearched,
       selectedFilters,
+      setSelectedFilters,
       performSearch,
       getRecipeById,
     ],
   )
 
-  // Provide the context value to children
-  return <SearchContext.Provider value={contextValue}>{children}</SearchContext.Provider>
+  return <SearchContext.Provider value={value}>{children}</SearchContext.Provider>
 }

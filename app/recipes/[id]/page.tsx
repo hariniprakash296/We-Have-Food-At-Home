@@ -46,18 +46,18 @@ export default function RecipeDetailPage() {
     const loadRecipe = () => {
       setIsLoading(true)
 
-      // First try to get the recipe from context
-      if (recipes.length > 0) {
-        const foundRecipe = recipes.find((r) => r.id === recipeId)
-        if (foundRecipe) {
-          setRecipe(foundRecipe)
-          setIsLoading(false)
-          return
-        }
-      }
-
-      // If not found in context, try to get from localStorage
       try {
+        // First try to get the recipe from context
+        if (recipes.length > 0) {
+          const foundRecipe = recipes.find((r) => r.id === recipeId)
+          if (foundRecipe) {
+            setRecipe(foundRecipe)
+            setIsLoading(false)
+            return
+          }
+        }
+
+        // If not found in context, try to get from localStorage
         const savedRecipes = localStorage.getItem("savedRecipes")
         if (savedRecipes) {
           const parsedRecipes = JSON.parse(savedRecipes) as Recipe[]
@@ -68,12 +68,18 @@ export default function RecipeDetailPage() {
             return
           }
         }
-      } catch (error) {
-        console.error("Error retrieving recipe from localStorage:", error)
-      }
 
-      // If we still don't have a recipe, set loading to false and let the UI handle it
-      setIsLoading(false)
+        // If we still don't have a recipe, set loading to false and let the UI handle it
+        console.warn(`Recipe with ID ${recipeId} not found in context or localStorage`)
+        setIsLoading(false)
+      } catch (error) {
+        console.error("Error loading recipe:", {
+          error,
+          recipeId,
+          contextRecipesCount: recipes.length,
+        })
+        setIsLoading(false)
+      }
     }
 
     // Load the recipe
@@ -83,7 +89,7 @@ export default function RecipeDetailPage() {
     return () => {
       // No cleanup needed for this effect
     }
-  }, [recipes, recipeId]) // Fixed: Removed recipe from dependencies
+  }, [recipes, recipeId])
 
   // Handle navigation back to home if recipe not found
   useEffect(() => {
@@ -123,19 +129,20 @@ export default function RecipeDetailPage() {
         {/* Back button */}
         <button
           onClick={() => router.push("/")}
-          className="flex items-center text-foreground mb-6"
+          className="flex items-center text-foreground mb-6 hover:underline focus:outline-none focus:ring-2 focus:ring-primary"
           aria-label="Back to recipes"
+          role="link"
         >
-          <ArrowLeft className="mr-2" size={20} />
+          <ArrowLeft className="mr-2" size={20} aria-hidden="true" />
           Back to recipes
         </button>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8" role="main" aria-label="Recipe details">
           {/* Recipe image */}
           <div className="relative h-[400px] rounded-lg overflow-hidden border-2 border-white">
             <Image
               src={recipe.imageUrl || "/placeholder.svg"}
-              alt={recipe.title}
+              alt={`${recipe.title} - Recipe image`}
               fill
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 50vw"
@@ -144,7 +151,11 @@ export default function RecipeDetailPage() {
 
             {/* Recipe type badge - only show if available */}
             {recipe.recipeType && (
-              <div className="absolute top-4 right-4 bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-sm">
+              <div 
+                className="absolute top-4 right-4 bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-sm"
+                role="status"
+                aria-label={`Recipe type: ${recipe.recipeType}`}
+              >
                 {recipe.recipeType}
               </div>
             )}

@@ -23,7 +23,7 @@ import { Progress } from "@/components/ui/progress"
  */
 export function SearchResults() {
   // Get the search state from context
-  const { recipes, loading, loadingProgress, error, hasSearched, query, selectedFilters, setSelectedFilters } =
+  const { recipes, loading, loadingProgress, error, hasSearched, searchQuery, selectedFilters, setSelectedFilters } =
     useSearch()
 
   /**
@@ -75,7 +75,7 @@ export function SearchResults() {
     return (
       <div className="mt-8 p-4 bg-card border border-border rounded-md text-card-foreground">
         <TypographyP>
-          No recipes found for "{query}". Please try different dietary requirements or cuisine preferences.
+          No recipes found for "{searchQuery}". Please try different dietary requirements or cuisine preferences.
         </TypographyP>
       </div>
     )

@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button"
 import { ChevronLeft } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+// Import UI context for sheet open state
+import { useUI } from "@/context/ui-context"
+import { useSearch } from "@/context/search-context"
+
 // Define filter categories and options
 const filterCategories = [
   {
@@ -54,20 +58,18 @@ const filterCategories = [
 ]
 
 /**
- * Props for the FilterSidebar component
- */
-interface FilterSidebarProps {
-  open: boolean // Whether the sidebar is open
-  onOpenChange: (open: boolean) => void // Function to call when open state changes
-  selectedFilters: string[] // Array of currently selected filter IDs
-  onFilterChange: (filters: string[]) => void // Function to call when filters change
-}
-
-/**
  * FilterSidebar component
  * Displays a sidebar with filter options for dietary preferences
  */
-export function FilterSidebar({ open, onOpenChange, selectedFilters, onFilterChange }: FilterSidebarProps) {
+export function FilterSidebar() {
+  // Consume UI context for open state management
+  const { isFilterOpen, setFilterOpen } = useUI()
+
+  // ----- Access search context to mutate selectedFilters -----------
+  // We keep responsibility separation: UI context toggles sheet, but the filter
+  // selections themselves still live in search context.
+  const { selectedFilters, setSelectedFilters } = useSearch()
+
   // Local state to track selected filters within the component
   const [localSelectedFilters, setLocalSelectedFilters] = useState<string[]>(selectedFilters)
 
@@ -86,11 +88,11 @@ export function FilterSidebar({ open, onOpenChange, selectedFilters, onFilterCha
     // Update local state
     setLocalSelectedFilters(newFilters)
     // Call the parent's onChange handler
-    onFilterChange(newFilters)
+    setSelectedFilters(newFilters)
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={isFilterOpen} onOpenChange={setFilterOpen}>
       <SheetContent
         side="right"
         className="w-[300px] sm:w-[350px] bg-black border-l border-gray-800 p-0"
