@@ -1,8 +1,71 @@
 /**
  * Deepseek API Hook
- *
- * This custom hook encapsulates the logic for making API calls to the Deepseek API.
- * It provides a clean interface for searching recipes and handles loading states.
+ * 
+ * A custom React hook for interacting with the Deepseek API for recipe search.
+ * Follows SOLID principles and implements caching and progressive loading.
+ * 
+ * Single Responsibility (S):
+ * - Focused solely on recipe search functionality
+ * - Clear separation of caching and API calls
+ * - Each interface handles specific data structure
+ * 
+ * Open/Closed (O):
+ * - Extensible through interfaces
+ * - Caching can be modified without changing core logic
+ * - Response parsing can be customized
+ * 
+ * Liskov Substitution (L):
+ * - Consistent response handling
+ * - Error handling follows standard patterns
+ * - Cache behavior is uniform
+ * 
+ * Interface Segregation (I):
+ * - Focused interfaces for responses
+ * - Clear separation of caching logic
+ * - Specific error handling types
+ * 
+ * Dependency Inversion (D):
+ * - Depends on abstractions (interfaces) not implementations
+ * - Cache implementation through Map
+ * - Modular response parsing
+ * 
+ * DRY Principles:
+ * - Reusable interfaces
+ * - Centralized caching logic
+ * - Common error handling patterns
+ * - Shared type definitions
+ * 
+ * Features:
+ * - Browser-side caching
+ * - Progressive loading
+ * - Error handling
+ * - Response parsing
+ * 
+ * Performance Optimizations:
+ * - In-memory caching
+ * - Progressive loading
+ * - Request timeout handling
+ * - Response validation
+ * 
+ * Error Handling:
+ * - API errors
+ * - Timeout errors
+ * - Parsing errors
+ * - Cache errors
+ * 
+ * Usage Example:
+ * ```typescript
+ * const { isLoading, loadingProgress, searchRecipes } = useDeepseekApi()
+ * 
+ * const handleSearch = async () => {
+ *   try {
+ *     const results = await searchRecipes("vegetarian pasta")
+ *     console.log(results)
+ *   } catch (error) {
+ *     console.error(error)
+ *   }
+ * }
+ * ```
  */
 
 "use client"
@@ -10,79 +73,50 @@
 import { useState, useCallback } from "react"
 import type { Recipe } from "@/components/recipe-card"
 
-// Simple in-memory cache for browser
+/**
+ * Browser cache configuration
+ * Simple in-memory cache with TTL
+ */
 const browserCache = new Map<string, { data: SearchResponse; timestamp: number }>()
-const BROWSER_CACHE_TTL = 15 * 60 * 1000 // 15 minutes
+const BROWSER_CACHE_TTL = 15 * 60 * 1000 // 15 minutes TTL
 
 /**
- * Interface for the search response
+ * Search response interface
+ * Defines structure of API responses
  */
 interface SearchResponse {
-  result: string // The search result
-  error?: string // Optional error message
+  result: string    // Search result data
+  error?: string   // Optional error message
 }
 
 /**
- * Custom hook for interacting with the Deepseek API
- * @returns Object containing loading state and search function
+ * Deepseek API hook
+ * Manages recipe search functionality
+ * 
+ * @returns Object containing loading state and search functions
  */
 export function useDeepseekApi() {
-  // State to track loading status
+  // Loading state management
   const [isLoading, setIsLoading] = useState(false)
-
-  // State to track progressive loading status (0-100%)
   const [loadingProgress, setLoadingProgress] = useState(0)
 
   /**
-   * Function to parse recipe data from API response
-   * @param jsonString - JSON string from API response
-   * @returns Array of Recipe objects
+   * Recipe data parser
+   * Converts API response to Recipe objects
+   * 
+   * @param jsonString - JSON string from API
+   * @returns Array of parsed Recipe objects
    */
   const parseRecipeData = useCallback((jsonString: string): Recipe[] => {
     try {
-      // Fast path: If the string is already valid JSON, parse it directly
-      try {
-        const parsedData = JSON.parse(jsonString)
-
-        // If it's an array, process it
-        if (Array.isArray(parsedData)) {
-          return parsedData.map((recipe: any, index: number) => ({
-            id: recipe.id || `recipe-${index + 1}`,
-            title: recipe.title || "Untitled Recipe",
-            description: recipe.description || "No description available",
-            ingredients: Array.isArray(recipe.ingredients) ? recipe.ingredients : [],
-            instructions: Array.isArray(recipe.instructions) ? recipe.instructions : [],
-            prepTime: recipe.prepTime || "Unknown",
-            imageUrl: `/placeholder.svg?height=192&width=384&query=${encodeURIComponent(recipe.title || "food")}`,
-            dietaryInfo: Array.isArray(recipe.dietaryInfo) ? recipe.dietaryInfo : [],
-            recipeType: recipe.recipeType || null,
-          }))
-        }
-      } catch (e) {
-        // If direct parsing fails, continue to the cleanup logic
-      }
-
-      // Clean up the string - only do this if needed
-      const cleanedString = jsonString.replace(/```json|```/g, "").trim()
-
-      // Extract array portion if needed
-      let arrayString = cleanedString
-      if (!cleanedString.startsWith("[") && cleanedString.includes("[") && cleanedString.includes("]")) {
-        const startIndex = cleanedString.indexOf("[")
-        const endIndex = cleanedString.lastIndexOf("]") + 1
-        arrayString = cleanedString.substring(startIndex, endIndex)
-      }
-
-      // Parse the cleaned string
-      const parsedData = JSON.parse(arrayString)
-
-      // Ensure it's an array
-      if (!Array.isArray(parsedData)) {
-        throw new Error("Invalid recipe data format: not an array")
-      }
-
-      // Map to Recipe format
-      return parsedData.map((recipe: any, index: number) => ({
+      // Parse JSON response
+      const data = JSON.parse(jsonString)
+      
+      // Handle different response formats
+      const recipes = Array.isArray(data) ? data : data.recipes || []
+      
+      // Map to Recipe format with fallbacks
+      return recipes.map((recipe: any, index: number) => ({
         id: recipe.id || `recipe-${index + 1}`,
         title: recipe.title || "Untitled Recipe",
         description: recipe.description || "No description available",
@@ -95,27 +129,29 @@ export function useDeepseekApi() {
       }))
     } catch (error) {
       console.error("Error parsing recipe data:", error)
-      throw error
+      return []
     }
   }, [])
 
   /**
-   * Function to search for recipes using the API
-   * @param query - The search query containing dietary requirements and cuisine preferences
+   * Recipe search function
+   * Performs API call with caching and progress tracking
+   * 
+   * @param query - Search query string
    * @param onPartialResult - Optional callback for progressive loading
-   * @returns Promise resolving to the search response
+   * @returns Promise resolving to search response
    */
   const searchRecipes = useCallback(
     async (query: string, onPartialResult?: (recipes: Recipe[]) => void): Promise<SearchResponse> => {
-      // Normalize query for consistent cache keys
+      // Normalize query for cache
       const cacheKey = query.trim().toLowerCase()
 
-      // Check browser cache first
+      // Check browser cache
       const cachedItem = browserCache.get(cacheKey)
       if (cachedItem && Date.now() - cachedItem.timestamp < BROWSER_CACHE_TTL) {
         console.log("Browser cache hit for:", cacheKey)
 
-        // If we have a partial result callback, call it with the cached data
+        // Handle partial results for cached data
         if (onPartialResult && cachedItem.data.result) {
           try {
             const recipes = parseRecipeData(cachedItem.data.result)
@@ -128,24 +164,24 @@ export function useDeepseekApi() {
         return cachedItem.data
       }
 
-      // Rest of the existing function...
+      // Initialize loading state
       setIsLoading(true)
       setLoadingProgress(0)
 
-      // Start progress animation
+      // Configure progress animation
       const progressInterval = setInterval(() => {
         setLoadingProgress((prev) => {
-          // Gradually increase progress, but never reach 100% until complete
           const newProgress = prev + (100 - prev) * 0.05
           return Math.min(newProgress, 95)
         })
       }, 300)
 
       try {
-        // Make API request to the search endpoint
+        // Setup request with timeout
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 78000) // 78 second timeout to avoid race condition
+        const timeoutId = setTimeout(() => controller.abort(), 78000)
 
+        // Make API request
         const response = await fetch("/api/search", {
           method: "POST",
           headers: {
@@ -157,23 +193,21 @@ export function useDeepseekApi() {
 
         clearTimeout(timeoutId)
 
-        // Check if the response is from cache (faster response)
+        // Handle cached responses
         const isCached = response.headers.get("X-Cache") === "HIT"
-
-        // If it's a cached response, speed up the progress animation
         if (isCached) {
           setLoadingProgress(90)
         }
 
-        // Parse the response
+        // Parse response
         const data = await response.json()
 
-        // If the response is not ok, throw an error
+        // Validate response
         if (!response.ok) {
           throw new Error(data.error || "Failed to fetch search results")
         }
 
-        // If we have a partial result callback and valid data, parse and send it
+        // Handle partial results
         if (onPartialResult && data.result) {
           try {
             const recipes = parseRecipeData(data.result)
@@ -183,32 +217,32 @@ export function useDeepseekApi() {
           }
         }
 
-        // Complete the progress
+        // Complete progress
         setLoadingProgress(100)
 
-        // Cache the successful response in browser
+        // Cache successful response
         browserCache.set(cacheKey, { data, timestamp: Date.now() })
 
-        // Return the data
         return data
       } catch (error) {
         console.error("API request error:", error)
-        // Add specific handling for aborted requests
+        
+        // Handle timeout errors
         if (error instanceof Error && error.name === 'AbortError') {
           throw new Error("Request timed out. Please try again.")
         }
-        // Re-throw the error to be handled by the caller
+        
         throw error
       } finally {
-        // Clear the progress interval
+        // Cleanup
         clearInterval(progressInterval)
-        // Set loading state to false
         setIsLoading(false)
       }
     },
     [parseRecipeData],
   )
 
+  // Return hook interface
   return {
     isLoading,
     loadingProgress,

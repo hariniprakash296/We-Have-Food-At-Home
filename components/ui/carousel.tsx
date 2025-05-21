@@ -1,3 +1,69 @@
+/**
+ * Carousel Component
+ * 
+ * A comprehensive carousel/slider system built with Embla Carousel that follows SOLID principles:
+ * 
+ * Single Responsibility (S):
+ * - Each subcomponent handles a specific aspect:
+ *   - Carousel: Core container and state management
+ *   - Content: Slide container and overflow handling
+ *   - Item: Individual slide management
+ *   - Previous/Next: Navigation controls
+ * 
+ * Open/Closed (O):
+ * - Extensible through plugins system
+ * - Customizable through className props
+ * - Flexible orientation support
+ * 
+ * Liskov Substitution (L):
+ * - Components maintain consistent behavior when extended
+ * - Preserves Embla Carousel's core functionality
+ * - Consistent prop interfaces
+ * 
+ * Interface Segregation (I):
+ * - Clean separation between carousel and navigation
+ * - Focused prop interfaces for each component
+ * - Context provides only necessary values
+ * 
+ * Dependency Inversion (D):
+ * - Built on Embla Carousel abstraction
+ * - Styling abstracted through utility functions
+ * - Plugin system for extending functionality
+ * 
+ * DRY Principles:
+ * - Shared context for state management
+ * - Consistent styling patterns
+ * - Reusable navigation logic
+ * - Common event handling
+ * 
+ * Accessibility Features:
+ * - Keyboard navigation support
+ * - ARIA roles and labels
+ * - Screen reader announcements
+ * - Focus management
+ * - Semantic HTML structure
+ * 
+ * Features:
+ * - Horizontal and vertical orientations
+ * - Touch/drag support
+ * - Keyboard navigation
+ * - Responsive design
+ * - Plugin support
+ * - Custom navigation
+ * 
+ * Usage Example:
+ * ```tsx
+ * <Carousel>
+ *   <CarouselContent>
+ *     <CarouselItem>Slide 1</CarouselItem>
+ *     <CarouselItem>Slide 2</CarouselItem>
+ *   </CarouselContent>
+ *   <CarouselPrevious />
+ *   <CarouselNext />
+ * </Carousel>
+ * ```
+ */
+
 "use client"
 
 import * as React from "react"
@@ -9,11 +75,28 @@ import { ArrowLeft, ArrowRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
+/**
+ * Type Definitions
+ * 
+ * @typedef {UseEmblaCarouselType[1]} CarouselApi - Embla Carousel API type
+ * @typedef {Parameters<typeof useEmblaCarousel>} UseCarouselParameters - Hook parameters
+ * @typedef {UseCarouselParameters[0]} CarouselOptions - Carousel configuration options
+ * @typedef {UseCarouselParameters[1]} CarouselPlugin - Carousel plugin type
+ */
 type CarouselApi = UseEmblaCarouselType[1]
 type UseCarouselParameters = Parameters<typeof useEmblaCarousel>
 type CarouselOptions = UseCarouselParameters[0]
 type CarouselPlugin = UseCarouselParameters[1]
 
+/**
+ * Carousel Props Interface
+ * 
+ * @typedef {Object} CarouselProps
+ * @property {CarouselOptions} [opts] - Carousel configuration options
+ * @property {CarouselPlugin} [plugins] - Carousel plugins
+ * @property {"horizontal" | "vertical"} [orientation] - Carousel orientation
+ * @property {(api: CarouselApi) => void} [setApi] - Callback for accessing carousel API
+ */
 type CarouselProps = {
   opts?: CarouselOptions
   plugins?: CarouselPlugin
@@ -21,6 +104,17 @@ type CarouselProps = {
   setApi?: (api: CarouselApi) => void
 }
 
+/**
+ * Carousel Context Props Interface
+ * 
+ * @typedef {Object} CarouselContextProps
+ * @property {ReturnType<typeof useEmblaCarousel>[0]} carouselRef - Carousel container ref
+ * @property {ReturnType<typeof useEmblaCarousel>[1]} api - Carousel API
+ * @property {() => void} scrollPrev - Previous slide function
+ * @property {() => void} scrollNext - Next slide function
+ * @property {boolean} canScrollPrev - Can scroll to previous
+ * @property {boolean} canScrollNext - Can scroll to next
+ */
 type CarouselContextProps = {
   carouselRef: ReturnType<typeof useEmblaCarousel>[0]
   api: ReturnType<typeof useEmblaCarousel>[1]
@@ -30,8 +124,19 @@ type CarouselContextProps = {
   canScrollNext: boolean
 } & CarouselProps
 
+/**
+ * Carousel Context
+ * Provides carousel state and functions to child components
+ */
 const CarouselContext = React.createContext<CarouselContextProps | null>(null)
 
+/**
+ * useCarousel Hook
+ * Custom hook for accessing carousel context
+ * 
+ * @throws {Error} If used outside of Carousel component
+ * @returns {CarouselContextProps} Carousel context values
+ */
 function useCarousel() {
   const context = React.useContext(CarouselContext)
 
@@ -42,6 +147,17 @@ function useCarousel() {
   return context
 }
 
+/**
+ * Root Carousel Component
+ * 
+ * @component
+ * @param {Object} props - Component props
+ * @param {string} [props.orientation="horizontal"] - Carousel orientation
+ * @param {CarouselOptions} [props.opts] - Carousel options
+ * @param {CarouselPlugin} [props.plugins] - Carousel plugins
+ * @param {string} [props.className] - Additional CSS classes
+ * @param {React.Ref} ref - Forwarded ref
+ */
 const Carousel = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & CarouselProps
@@ -150,6 +266,20 @@ const Carousel = React.forwardRef<
 )
 Carousel.displayName = "Carousel"
 
+/**
+ * Carousel Content Component
+ * Container for carousel slides
+ * 
+ * @component
+ * @param {Object} props - Component props
+ * @param {string} [props.className] - Additional CSS classes
+ * @param {React.Ref} ref - Forwarded ref
+ * 
+ * Features:
+ * - Overflow handling
+ * - Flexible orientation support
+ * - Responsive layout
+ */
 const CarouselContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -172,6 +302,20 @@ const CarouselContent = React.forwardRef<
 })
 CarouselContent.displayName = "CarouselContent"
 
+/**
+ * Carousel Item Component
+ * Individual slide container
+ * 
+ * @component
+ * @param {Object} props - Component props
+ * @param {string} [props.className] - Additional CSS classes
+ * @param {React.Ref} ref - Forwarded ref
+ * 
+ * Features:
+ * - Flexible sizing
+ * - Orientation support
+ * - ARIA attributes
+ */
 const CarouselItem = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -194,6 +338,22 @@ const CarouselItem = React.forwardRef<
 })
 CarouselItem.displayName = "CarouselItem"
 
+/**
+ * Carousel Previous Button
+ * Navigation button for previous slide
+ * 
+ * @component
+ * @param {Object} props - Component props
+ * @param {string} [props.className] - Additional CSS classes
+ * @param {string} [props.variant="outline"] - Button variant
+ * @param {string} [props.size="icon"] - Button size
+ * @param {React.Ref} ref - Forwarded ref
+ * 
+ * Features:
+ * - Automatic disable state
+ * - Screen reader support
+ * - Orientation aware positioning
+ */
 const CarouselPrevious = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<typeof Button>
@@ -206,7 +366,7 @@ const CarouselPrevious = React.forwardRef<
       variant={variant}
       size={size}
       className={cn(
-        "absolute  h-8 w-8 rounded-full",
+        "absolute h-8 w-8 rounded-full",
         orientation === "horizontal"
           ? "-left-12 top-1/2 -translate-y-1/2"
           : "-top-12 left-1/2 -translate-x-1/2 rotate-90",
@@ -223,6 +383,22 @@ const CarouselPrevious = React.forwardRef<
 })
 CarouselPrevious.displayName = "CarouselPrevious"
 
+/**
+ * Carousel Next Button
+ * Navigation button for next slide
+ * 
+ * @component
+ * @param {Object} props - Component props
+ * @param {string} [props.className] - Additional CSS classes
+ * @param {string} [props.variant="outline"] - Button variant
+ * @param {string} [props.size="icon"] - Button size
+ * @param {React.Ref} ref - Forwarded ref
+ * 
+ * Features:
+ * - Automatic disable state
+ * - Screen reader support
+ * - Orientation aware positioning
+ */
 const CarouselNext = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<typeof Button>

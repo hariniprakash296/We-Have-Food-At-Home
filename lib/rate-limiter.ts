@@ -1,75 +1,137 @@
 /**
  * Rate Limiter Utility
- *
- * This file implements a rate limiting mechanism to prevent abuse of the API.
- * It uses an LRU cache to track requests by IP address and enforces limits
- * on the number of requests allowed within a time interval.
+ * 
+ * A comprehensive rate limiting implementation using LRU cache.
+ * Follows SOLID principles and implements efficient request tracking.
+ * 
+ * Single Responsibility (S):
+ * - Focused solely on rate limiting functionality
+ * - Clear separation of token management and time tracking
+ * - Each function handles specific aspect of rate limiting
+ * 
+ * Open/Closed (O):
+ * - Extensible through options interface
+ * - Cache implementation can be modified
+ * - Time tracking can be customized
+ * 
+ * Liskov Substitution (L):
+ * - Consistent token management
+ * - Uniform time tracking
+ * - Standard cache behavior
+ * 
+ * Interface Segregation (I):
+ * - Focused interfaces for options
+ * - Clear separation of concerns
+ * - Specific return types
+ * 
+ * Dependency Inversion (D):
+ * - Depends on abstractions (LRU cache) not implementations
+ * - Time tracking through standard Date API
+ * - Modular token management
+ * 
+ * DRY Principles:
+ * - Reusable interfaces
+ * - Centralized token management
+ * - Common time tracking patterns
+ * - Shared configuration
+ * 
+ * Features:
+ * - Request tracking by IP
+ * - Automatic token expiration
+ * - Configurable limits
+ * - Human-readable reset times
+ * 
+ * Performance Optimizations:
+ * - LRU cache for efficient storage
+ * - Automatic cleanup of expired tokens
+ * - Optimized time calculations
+ * 
+ * Security Considerations:
+ * - IP-based tracking
+ * - Automatic token expiration
+ * - Memory usage limits
+ * 
+ * Usage Example:
+ * ```typescript
+ * const result = rateLimit("127.0.0.1")
+ * if (result.limited) {
+ *   console.log(`Rate limited. Try again in ${getResetTimeString(result.resetTime)}`)
+ * }
+ * ```
  */
 
 import { LRUCache } from "lru-cache"
 
 /**
- * Interface defining the options for rate limiting
+ * Rate limiting options interface
+ * Defines configuration for rate limiting behavior
  */
 type RateLimitOptions = {
-  limit: number // Maximum number of requests allowed
-  interval: number // Time interval in milliseconds
+  limit: number    // Maximum requests allowed
+  interval: number // Time window in milliseconds
 }
 
 /**
- * Default rate limiting options
+ * Default configuration
+ * Sets standard rate limiting parameters
  */
 const defaultOptions: RateLimitOptions = {
-  limit: 5,
-  interval: 60 * 1000, // 1 minute
+  limit: 5,        // 5 requests
+  interval: 60 * 1000, // per minute
 }
 
 /**
- * LRU cache to store tokens for each IP address
- * Each IP address has an array of timestamps representing requests
+ * Token cache
+ * LRU cache storing request timestamps by IP
+ * 
+ * Configuration:
+ * - Maximum 500 IPs tracked
+ * - Automatic expiration after interval
  */
 const tokenCache = new LRUCache<string, number[]>({
-  max: 500, // max 500 different IPs
-  ttl: defaultOptions.interval,
+  max: 500, // Maximum IPs tracked
+  ttl: defaultOptions.interval, // Auto-expire after interval
 })
 
 /**
- * Apply rate limiting to an IP address
- * @param ip - The IP address to rate limit
- * @returns Object containing rate limit information
+ * Apply rate limiting to an IP
+ * Tracks and limits requests from specific IPs
+ * 
+ * @param ip - IP address to rate limit
+ * @returns Object containing rate limit status
  */
 export function rateLimit(ip: string) {
-  // Get the current timestamp
+  // Get current timestamp
   const now = Date.now()
 
-  // Get existing tokens for this IP or initialize an empty array
+  // Get or initialize token array
   const token = tokenCache.get(ip) || []
 
-  // Filter tokens that are older than the interval
+  // Remove expired tokens
   const validTokens = token.filter((time) => time > now - defaultOptions.interval)
 
-  // Update the cache with the filtered tokens
+  // Update cache with valid tokens
   tokenCache.set(ip, validTokens)
 
-  // Check if the IP has exceeded the rate limit
+  // Check if limit exceeded
   if (validTokens.length >= defaultOptions.limit) {
-    // Calculate when the rate limit will reset
+    // Calculate reset time
     const resetTime = validTokens[0] + defaultOptions.interval
 
-    // Return information about the rate limit
+    // Return limited status
     return {
       limited: true,
       resetTime,
     }
   }
 
-  // Add the current timestamp to the tokens
+  // Add new token
   validTokens.push(now)
 
-  // Update the cache with the new tokens
+  // Update cache
   tokenCache.set(ip, validTokens)
 
-  // Return information about the rate limit
+  // Return not limited status
   return {
     limited: false,
     remaining: defaultOptions.limit - validTokens.length,
@@ -78,17 +140,19 @@ export function rateLimit(ip: string) {
 }
 
 /**
- * Get a human-readable string for when the rate limit will reset
- * @param resetTime - The timestamp when the rate limit will reset
- * @returns String representing the time until reset
+ * Get human-readable reset time
+ * Converts timestamp to readable duration
+ * 
+ * @param resetTime - Timestamp when limit resets
+ * @returns Human-readable time string
  */
 export function getResetTimeString(resetTime: number): string {
-  // Calculate the difference between the reset time and now
+  // Calculate remaining time
   const diff = Math.max(0, resetTime - Date.now())
 
-  // Convert to seconds and round up
+  // Convert to seconds
   const seconds = Math.ceil(diff / 1000)
 
-  // Return a formatted string
+  // Return formatted string
   return `${seconds} seconds`
 }

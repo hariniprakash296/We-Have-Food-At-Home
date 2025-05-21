@@ -1,3 +1,66 @@
+/**
+ * Calendar Component
+ * 
+ * A comprehensive calendar component built with React Day Picker that follows SOLID principles:
+ * 
+ * Single Responsibility (S):
+ * - Focused solely on date selection and display
+ * - Each class name handles specific styling aspects
+ * - Navigation components handle specific interactions
+ * 
+ * Open/Closed (O):
+ * - Extensible through comprehensive className system
+ * - Custom components can be provided
+ * - Styling can be customized without modifying core logic
+ * 
+ * Liskov Substitution (L):
+ * - Maintains React Day Picker's base behavior
+ * - Preserves all original component props
+ * - Consistent interaction patterns
+ * 
+ * Interface Segregation (I):
+ * - Clean separation between presentation and logic
+ * - Focused prop interface through CalendarProps
+ * - Modular styling system
+ * 
+ * Dependency Inversion (D):
+ * - Built on React Day Picker abstraction
+ * - Styling abstracted through utility functions
+ * - Icon components abstracted for flexibility
+ * 
+ * DRY Principles:
+ * - Shared button variants
+ * - Consistent styling patterns
+ * - Reusable className structures
+ * - Centralized style definitions
+ * 
+ * Accessibility Features:
+ * - ARIA attributes for date selection
+ * - Keyboard navigation support
+ * - Focus management
+ * - Screen reader announcements
+ * - High contrast states
+ * 
+ * Features:
+ * - Date range selection
+ * - Outside days display
+ * - Today highlighting
+ * - Disabled dates support
+ * - Responsive layout
+ * - Custom navigation icons
+ * - Multiple style variants
+ * 
+ * Usage Example:
+ * ```tsx
+ * <Calendar
+ *   mode="single"
+ *   selected={date}
+ *   onSelect={setDate}
+ *   className="rounded-md border"
+ * />
+ * ```
+ */
+
 "use client"
 
 import * as React from "react"
@@ -7,8 +70,40 @@ import { DayPicker } from "react-day-picker"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 
+/**
+ * Calendar Props Interface
+ * 
+ * Extends DayPicker props to maintain full compatibility:
+ * @typedef {Object} CalendarProps
+ * @extends {React.ComponentProps<typeof DayPicker>}
+ */
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
+/**
+ * Calendar Component
+ * 
+ * @component
+ * @param {CalendarProps} props - Component props
+ * @param {string} [props.className] - Additional CSS classes
+ * @param {Object} [props.classNames] - Custom class names for subcomponents
+ * @param {boolean} [props.showOutsideDays=true] - Whether to show days from previous/next months
+ * 
+ * Styling System:
+ * - months: Flex layout with responsive behavior
+ * - month: Vertical spacing
+ * - caption: Header with month/year display
+ * - nav: Navigation buttons container
+ * - table: Calendar grid layout
+ * - cell: Individual day cell styling
+ * - day: Day button appearance
+ * 
+ * States:
+ * - selected: Primary color highlighting
+ * - today: Accent background
+ * - outside: Muted appearance
+ * - disabled: Reduced opacity
+ * - range: Special styling for date ranges
+ */
 function Calendar({
   className,
   classNames,
