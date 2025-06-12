@@ -61,7 +61,7 @@
  * ```
  */
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 
 /**
  * Hook return value interface
@@ -75,32 +75,25 @@ interface UseImageGenerationReturn {
 }
 
 /**
- * Image generation hook
- * Manages state and API calls for image generation
- * 
- * @returns Object containing state and functions for image generation
+ * Custom hook for handling image generation
+ * Manages state and API calls for generating images from text descriptions
  */
-export const useImageGeneration = (): UseImageGenerationReturn => {
-  // State management using React hooks
+export function useImageGeneration(): UseImageGenerationReturn {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   /**
-   * Image generation function
-   * Makes API call to generate image from description
-   * 
-   * @param description - Text description for image generation
+   * Generate image from description
+   * Makes API call to our image generation endpoint
    */
-  const generateImage = async (description: string) => {
-    console.log(`useImageGeneration: generateImage called with description: "${description.substring(0,50)}..."`);
-    try {
-      // Set loading state
-      setIsLoading(true)
-      setError(null)
+  const generateImage = useCallback(async (description: string) => {
+    console.log('useImageGeneration: Starting image generation for description:', description);
+    setIsLoading(true)
+    setError(null)
 
-      // Make API request
-      console.log('useImageGeneration: Attempting to fetch from /api/image-generation');
+    try {
+      console.log('useImageGeneration: Making API request to /api/image-generation');
       const response = await fetch('/api/image-generation', {
         method: 'POST',
         headers: {
@@ -109,29 +102,24 @@ export const useImageGeneration = (): UseImageGenerationReturn => {
         body: JSON.stringify({ description }),
       })
 
-      // Handle response
-      console.log(`useImageGeneration: Response status from /api/image-generation: ${response.status}`);
-      const data = await response.json()
-      console.log('useImageGeneration: Response data from /api/image-generation:', data);
+      console.log('useImageGeneration: Received response:', response.status);
 
-      // Validate response
       if (!response.ok) {
-        console.error('useImageGeneration: Error from /api/image-generation:', data.error || 'Failed to generate image');
-        throw new Error(data.error || 'Failed to generate image')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to generate image')
       }
 
-      // Update state with image URL
+      const data = await response.json()
+      console.log('useImageGeneration: Successfully received image URL:', data.url);
       setImageUrl(data.url)
     } catch (err) {
-      // Handle errors
-      console.error('useImageGeneration: Catch block error:', err);
+      console.error('useImageGeneration: Error generating image:', err)
       setError(err instanceof Error ? err.message : 'Failed to generate image')
       setImageUrl(null)
     } finally {
-      // Reset loading state
       setIsLoading(false)
     }
-  }
+  }, [])
 
   // Return hook interface
   return {

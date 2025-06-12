@@ -11,6 +11,9 @@ const nextConfig = {
     dangerouslyAllowSVG: true,
     contentDispositionType: 'inline',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    domains: [
+      "api-images.getimg.ai",
+    ],
   },
 }
 

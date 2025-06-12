@@ -123,7 +123,6 @@ export function useDeepseekApi() {
         ingredients: Array.isArray(recipe.ingredients) ? recipe.ingredients : [],
         instructions: Array.isArray(recipe.instructions) ? recipe.instructions : [],
         prepTime: recipe.prepTime || "Unknown",
-        imageUrl: `/placeholder.svg?height=192&width=384&query=${encodeURIComponent(recipe.title || "food")}`,
         dietaryInfo: Array.isArray(recipe.dietaryInfo) ? recipe.dietaryInfo : [],
         recipeType: recipe.recipeType || null,
       }))

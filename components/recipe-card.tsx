@@ -36,6 +36,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import Image from "next/image"
 import { TypographyMuted, TypographySmall } from "@/components/ui/typography"
 import Link from "next/link"
+import { useEffect } from "react" // Effect to trigger image generation on mount
+// Custom hook (lives in app/hooks)
+import { useImageGeneration } from "@/app/hooks/useImageGeneration"
 
 /**
  * Recipe Interface
@@ -64,7 +67,7 @@ export interface Recipe {
   ingredients: string[]
   instructions: string[]
   prepTime: string
-  imageUrl: string
+  imageUrl?: string // optional – will be overwritten by AI-generated image
   dietaryInfo: string[]
   recipeType?: string
 }
@@ -80,19 +83,35 @@ interface RecipeCardProps {
 }
 
 /**
- * RecipeCard Component
- * Purpose: Display recipe preview in card format
- * 
- * Features:
- * 1. Interactive card with hover effects
- * 2. Optimized image loading with Next.js Image
- * 3. Responsive layout and typography
- * 4. Accessible link to full recipe
- * 
- * @param {RecipeCardProps} props - Component properties
- * @returns {JSX.Element} Rendered recipe card
+ * RecipeCard Component (Dynamic Image Version)
+ *
+ * This updated implementation generates an AI image on-the-fly using the
+ * useImageGeneration hook. It keeps the same visual design while ensuring the
+ * /api/image-generation route is called for every card rendered.
  */
 export function RecipeCard({ recipe }: RecipeCardProps) {
+  // Pull helpers from our custom image-generation hook
+  const { imageUrl, isLoading, error, generateImage } = useImageGeneration()
+
+  // Kick off generation when the component mounts (or when the description
+  // changes – e.g., when list updates).
+  useEffect(() => {
+    generateImage(recipe.description)
+  }, [recipe.description, generateImage])
+
+  /* Optional: log useful debug info in dev */
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      // eslint-disable-next-line no-console
+      console.log("RecipeCard debug →", {
+        title: recipe.title,
+        imageUrl,
+        isLoading,
+        error,
+      })
+    }
+  }, [recipe.title, imageUrl, isLoading, error])
+
   /**
    * Props Destructuring
    * Purpose: Extract needed properties with defaults
@@ -122,20 +141,31 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
     <Link href={`/recipes/${id}`} className="block">
       <Card className="recipe-card overflow-hidden border-2 border-white bg-card hover:shadow-lg transition-all duration-200">
         <div className="h-full w-full rounded-[5px]">
-          {/* Image Container
-              Purpose: Display recipe image with consistent sizing
-              Features:
-              - Responsive image optimization
-              - Fallback image handling
-              - Proper aspect ratio */}
-          <div className="relative h-48 w-full overflow-hidden">
-            <Image
-              src={recipe.imageUrl || "/placeholder.svg"}
-              alt={title}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-            />
+          {/* Image slot - handles loading, error, and success states */}
+          <div className="relative h-48 w-full overflow-hidden bg-muted">
+            {isLoading ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="animate-pulse text-muted-foreground">Generating image...</div>
+              </div>
+            ) : error ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Image
+                  src="/placeholder.svg"
+                  alt={title}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                />
+              </div>
+            ) : (
+              <Image
+                src={imageUrl || recipe.imageUrl || "/placeholder.svg"}
+                alt={title}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+              />
+            )}
 
             {/* Recipe Type Badge
                 Purpose: Display category if available

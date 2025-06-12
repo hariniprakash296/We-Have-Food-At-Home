@@ -116,13 +116,14 @@ export async function POST(request: NextRequest) {
     const { description } = body
     console.log(`/api/image-generation: Received description: "${description.substring(0,50)}..."`);
 
-    // Configure API request
+    // Configure API request with URL and options
+    const url = 'https://api.getimg.ai/v1/flux-schnell/text-to-image';
     const options = {
       method: 'POST',
       headers: {
         accept: 'application/json',
         'content-type': 'application/json',
-        'Authorization': `Bearer ${process.env.GETIMG_API_KEY}`
+        authorization: `Bearer ${process.env.GETIMG_API_KEY}`
       },
       body: JSON.stringify({
         prompt: description,
@@ -132,21 +133,45 @@ export async function POST(request: NextRequest) {
         output_format: 'jpeg',
         response_format: 'url'
       })
-    }
+    };
 
-    // Make API request
+    /**
+     * Modern Async/Await Implementation for API Requests
+     * 
+     * This implementation uses async/await syntax instead of .then() chains.
+     * Here's why this is better than the traditional .then() approach:
+     * 
+     * Traditional .then() chain would look like:
+     * fetch(url, options)
+     *   .then(res => res.json())
+     *   .then(json => console.log(json))
+     *   .catch(err => console.error(err));
+     * 
+     * Benefits of async/await:
+     * 1. More readable - looks like synchronous code
+     * 2. Better error handling - try/catch blocks are more intuitive
+     * 3. Easier debugging - clearer stack traces
+     * 4. More control over the flow of operations
+     * 5. Consistent with modern JavaScript/TypeScript practices
+     */
+
+    // Step 1: Make the API request
+    // The 'await' keyword pauses execution until the Promise resolves
     console.log('/api/image-generation: Attempting to call getimg.ai API.');
-    const response = await fetch('https://api.getimg.ai/v1/flux-schnell/text-to-image', options)
+    const response = await fetch(url, options)
     console.log(`/api/image-generation: Response status from getimg.ai: ${response.status}`);
 
-    // Handle API errors
+    // Step 2: Handle potential API errors
+    // This is more robust than .then() as we can check response status before parsing
     if (!response.ok) {
       const errorBody = await response.text()
       console.error(`/api/image-generation: Error from getimg.ai. Status: ${response.status}, Body: ${errorBody}`);
       throw new Error(`Failed to generate image from getimg.ai. Status: ${response.status}`)
     }
 
-    // Process successful response
+    // Step 3: Process successful response
+    // Using await makes it clear we're waiting for JSON parsing to complete
+    // TypeScript type 'GetImgResponse' ensures type safety (not possible in simple .then chains)
     const data: GetImgResponse = await response.json()
     console.log('/api/image-generation: Successfully received image URL from getimg.ai:', data.url);
 

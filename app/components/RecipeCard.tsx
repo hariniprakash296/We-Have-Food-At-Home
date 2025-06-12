@@ -81,87 +81,125 @@
  */
 
 import { useEffect } from 'react'
-import { useImageGeneration } from '../hooks/useImageGeneration'
+import { useImageGeneration } from '@/hooks/useImageGeneration'
+import Link from 'next/link'
+import Image from 'next/image'
+import { Card, CardContent } from '@/components/ui/card'
+import { TypographyMuted, TypographySmall } from '@/components/ui/typography'
 
-// Interface for Recipe from Deepseek API
-interface Recipe {
-  id: string                 // Unique identifier for the recipe
-  title: string             // Recipe title
-  description: string       // Brief description of the recipe
-  ingredients: string[]     // List of required ingredients
-  instructions: string[]    // Step-by-step cooking instructions
-  prepTime: string         // Preparation time
-  dietaryInfo: string[]    // Dietary tags and information
-  recipeType: string      // Type of recipe (breakfast, lunch, dinner, etc.)
+/**
+ * Recipe Interface
+ * Purpose: Define type structure for recipe data
+ */
+export interface Recipe {
+  id: string
+  title: string
+  description: string
+  ingredients: string[]
+  instructions: string[]
+  prepTime: string
+  imageUrl?: string // Made optional since we'll generate it
+  dietaryInfo: string[]
+  recipeType?: string
 }
 
-// Props interface for the RecipeCard component
 interface RecipeCardProps {
-  recipe: Recipe           // Recipe data to display
+  recipe: Recipe
 }
 
-export const RecipeCard = ({ recipe }: RecipeCardProps) => {
+/**
+ * RecipeCard Component
+ * Purpose: Display recipe preview in card format with AI-generated images
+ */
+export function RecipeCard({ recipe }: RecipeCardProps) {
   // Use our custom hook for image generation
-  // This abstracts the image generation logic and state management
   const { imageUrl, isLoading, error, generateImage } = useImageGeneration()
 
   // Generate image when component mounts or recipe changes
-  // This effect handles the image generation lifecycle
   useEffect(() => {
-    console.log(`RecipeCard useEffect for "${recipe.title}": Calling generateImage with description: "${recipe.description.substring(0, 50)}..."`);
+    console.log(`RecipeCard: Starting image generation for "${recipe.title}"`);
+    console.log(`RecipeCard: Description: "${recipe.description}"`);
     generateImage(recipe.description)
   }, [recipe.description, generateImage])
 
+  // Log state changes
+  useEffect(() => {
+    console.log(`RecipeCard: State update for "${recipe.title}":`);
+    console.log('- imageUrl:', imageUrl);
+    console.log('- isLoading:', isLoading);
+    console.log('- error:', error);
+  }, [imageUrl, isLoading, error, recipe.title])
+
+  const {
+    id,
+    title,
+    description,
+    prepTime,
+    dietaryInfo = [],
+    recipeType,
+  } = recipe
+
   return (
-    // Main container with shadow and rounded corners
-    // Uses Tailwind for consistent styling
-    <div className="rounded-lg shadow-lg overflow-hidden">
-      {/* Image section with loading state management */}
-      <div className="w-full h-48 bg-white relative">
-        {/* Loading state indicator */}
-        {isLoading ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-white">
-            <span className="text-gray-500">loading...</span>
-          </div>
-        ) : error ? (
-          // Error state display
-          <div className="absolute inset-0 flex items-center justify-center bg-white">
-            <span className="text-red-500">{error}</span>
-          </div>
-        ) : imageUrl ? (
-          // Generated image display
-          <img
-            src={imageUrl}
-            alt={recipe.title}
-            className="w-full h-full object-cover"
-          />
-        ) : null}
-      </div>
+    <Link href={`/recipes/${id}`} className="block">
+      <Card className="recipe-card overflow-hidden border-2 border-white bg-card hover:shadow-lg transition-all duration-200">
+        <div className="h-full w-full rounded-[5px]">
+          {/* Image Container with loading states */}
+          <div className="relative h-48 w-full overflow-hidden bg-muted">
+            {isLoading ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="animate-pulse text-muted-foreground">Generating image...</div>
+              </div>
+            ) : error ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Image
+                  src="/placeholder.svg"
+                  alt={title}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                />
+              </div>
+            ) : (
+              <Image
+                src={imageUrl || "/placeholder.svg"}
+                alt={title}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+              />
+            )}
 
-      {/* Recipe details section */}
-      <div className="p-4">
-        {/* Recipe title with proper heading hierarchy */}
-        <h3 className="text-xl font-semibold mb-2">{recipe.title}</h3>
-        {/* Recipe description with appropriate text color */}
-        <p className="text-gray-600 mb-4">{recipe.description}</p>
-        
-        {/* Dietary information tags */}
-        <div className="flex flex-wrap gap-2 mb-3">
-          {recipe.dietaryInfo.map((tag, index) => (
-            <span
-              key={index}
-              className="px-2 py-1 bg-gray-100 rounded-full text-sm text-gray-600"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
+            {recipeType && (
+              <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                {recipeType}
+              </div>
+            )}
+          </div>
 
-        {/* Preparation time display */}
-        <div className="text-sm text-gray-500">
-          Prep time: {recipe.prepTime}
+          <CardContent className="p-4">
+            <h3 className="text-xl font-bold mb-2 text-foreground">{title}</h3>
+
+            <TypographyMuted className="mb-3">
+              {description.length > 100 ? `${description.substring(0, 100)}...` : description}
+            </TypographyMuted>
+
+            <div className="flex flex-wrap gap-2 mb-3">
+              {dietaryInfo.map((tag, index) => (
+                <span
+                  key={index}
+                  className="px-2 py-1 rounded-full text-xs inline-block bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <TypographySmall>Prep time: {prepTime}</TypographySmall>
+            </div>
+          </CardContent>
         </div>
-      </div>
-    </div>
+      </Card>
+    </Link>
   )
 } 
