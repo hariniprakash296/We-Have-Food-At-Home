@@ -1,7 +1,7 @@
 # We Have Food At Home
 ## Purpose:
 A website that generates Meal Plans accordding to the user's specific dietary requirements and cuisine preference.
-Currently working on optimising the caching and API query to speed up generation
+Currently working on optimising the Caching and API query to speed up generation of results
 
-![image](https://github.com/user-attachments/assets/4294195b-9996-4c07-92f6-2b7c6f732094)
+![Image](https://github.com/user-attachments/assets/449f6a76-360b-45f3-ab17-f10d675124fb)
 
