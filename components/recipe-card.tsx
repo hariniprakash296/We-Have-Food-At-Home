@@ -39,6 +39,9 @@ import Link from "next/link"
 import { useEffect } from "react" // Effect to trigger image generation on mount
 // Custom hook (lives in app/hooks)
 import { useImageGeneration } from "@/app/hooks/useImageGeneration"
+// Import search context to persist generated image URL
+import { useSearch } from "@/context/search-context"
+import { useStorePrices } from "@/app/hooks/useStorePrices"
 
 /**
  * Recipe Interface
@@ -70,6 +73,7 @@ export interface Recipe {
   imageUrl?: string // optional – will be overwritten by AI-generated image
   dietaryInfo: string[]
   recipeType?: string
+  storePrices?: StorePrice[] // NEW – top-3 stores with prices
 }
 
 /**
@@ -83,6 +87,24 @@ interface RecipeCardProps {
 }
 
 /**
+ * Store Price Interface
+ * Purpose: Define type structure for store price data
+ * 
+ * Properties:
+ * @property {string} store - Name of the shop/vendor
+ * @property {string} price - Price string as returned by the API e.g. "$3.49"
+ * @property {string} [url] - Optional product URL
+ */
+export interface StorePrice {
+  /** Name of the shop/vendor */
+  store: string
+  /** Price string as returned by the API e.g. "$3.49" */
+  price: string
+  /** Optional product URL */
+  url?: string
+}
+
+/**
  * RecipeCard Component (Dynamic Image Version)
  *
  * This updated implementation generates an AI image on-the-fly using the
@@ -92,6 +114,41 @@ interface RecipeCardProps {
 export function RecipeCard({ recipe }: RecipeCardProps) {
   // Pull helpers from our custom image-generation hook
   const { imageUrl, isLoading, error, generateImage } = useImageGeneration()
+
+  // Persist generated image URL to global context/localStorage once we have it
+  const { updateRecipeImage, updateRecipeStores } = useSearch()
+  // NEW – hook for store prices
+  const {
+    storePrices,
+    isLoading: isStoresLoading,
+    error: _storesError,
+    fetchStorePrices,
+  } = useStorePrices()
+
+  // Extract recipe properties early for subsequent effects
+  const {
+    id,
+    title,
+    description,
+    prepTime,
+    dietaryInfo = [],
+    recipeType,
+  } = recipe
+
+  // Trigger store-price fetch only after image is available to ensure proper flow
+  const imageReady = imageUrl || recipe.imageUrl
+
+  useEffect(() => {
+    if (!imageReady) return
+    fetchStorePrices(title)
+  }, [imageReady, title, fetchStorePrices])
+
+  // Persist store prices once available
+  useEffect(() => {
+    if (storePrices.length > 0) {
+      updateRecipeStores(id, storePrices)
+    }
+  }, [storePrices, id, updateRecipeStores])
 
   // Kick off generation when the component mounts (or when the description
   // changes – e.g., when list updates).
@@ -112,22 +169,12 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
     }
   }, [recipe.title, imageUrl, isLoading, error])
 
-  /**
-   * Props Destructuring
-   * Purpose: Extract needed properties with defaults
-   * 
-   * Implementation:
-   * - Provides fallback empty array for dietaryInfo
-   * - Optional recipeType handled safely
-   */
-  const {
-    id,
-    title,
-    description,
-    prepTime,
-    dietaryInfo = [],
-    recipeType,
-  } = recipe
+  // Persist generated image URL to global context/localStorage once we have it
+  useEffect(() => {
+    if (imageUrl && !recipe.imageUrl) {
+      updateRecipeImage(recipe.id, imageUrl)
+    }
+  }, [imageUrl, recipe.id, recipe.imageUrl, updateRecipeImage])
 
   return (
     /**
@@ -208,7 +255,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
               {dietaryInfo.map((tag, index) => (
                 <span
                   key={index}
-                  className="px-2 py-1 rounded-full text-xs inline-block bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                  className="px-2 py-2 rounded-full text-xs inline-block bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
                 >
                   {tag}
                 </span>
@@ -221,6 +268,27 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
             <div className="flex items-center justify-between">
               <TypographySmall>Prep time: {prepTime}</TypographySmall>
             </div>
+
+            {/* Where to buy section */}
+            {isStoresLoading && (
+              <TypographyMuted className="mt-2">Fetching best prices…</TypographyMuted>
+            )}
+            {!isStoresLoading && storePrices.length > 0 && (
+              <div className="mt-2">
+                <TypographySmall className="font-semibold mb-1 block">Where to buy:</TypographySmall>
+                <ul className="space-y-1">
+                  {storePrices.map((sp: StorePrice, idx: number) => (
+                    <li key={idx} className="flex justify-between text-sm text-foreground">
+                      <span>{sp.store}</span>
+                      <span>{sp.price}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {!isStoresLoading && storePrices.length === 0 && _storesError && (
+              <TypographyMuted className="mt-2 text-destructive">{_storesError}</TypographyMuted>
+            )}
           </CardContent>
         </div>
       </Card>

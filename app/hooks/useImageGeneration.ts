@@ -62,6 +62,7 @@
  */
 
 import { useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 
 /**
  * Hook return value interface
@@ -82,6 +83,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const router = useRouter(); // Add router for navigation
 
   /**
    * Generate image from description
@@ -106,6 +108,13 @@ export function useImageGeneration(): UseImageGenerationReturn {
 
       if (!response.ok) {
         const errorData = await response.json()
+        // Detect rate limit error and handle session clear + redirect
+        if (errorData.error && errorData.error.toLowerCase().includes('rate limit')) {
+          // Clear session/localStorage and redirect to home
+          sessionStorage.clear();
+          localStorage.clear();
+          router.push('/');
+        }
         throw new Error(errorData.error || 'Failed to generate image')
       }
 
@@ -119,7 +128,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [router])
 
   // Return hook interface
   return {

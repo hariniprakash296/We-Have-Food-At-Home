@@ -18,6 +18,7 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Inter, Pacifico } from "next/font/google"
 import "./globals.css"
+import { SearchProvider } from "@/context/search-context"
 import { ThemeProvider } from "@/components/theme-provider"
 
 /**
@@ -116,15 +117,17 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`${inter.variable} ${pacifico.variable} dark`}>
       <body className={`${inter.className} antialiased min-h-screen bg-background text-foreground`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          forcedTheme="dark"
-          enableSystem={false}
-          disableTransitionOnChange
-        >
-          {children}
-        </ThemeProvider>
+        <SearchProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            forcedTheme="dark"
+            enableSystem={false}
+            disableTransitionOnChange
+          >
+            {children}
+          </ThemeProvider>
+        </SearchProvider>
       </body>
     </html>
   )

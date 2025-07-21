@@ -14,6 +14,13 @@ const nextConfig = {
     domains: [
       "api-images.getimg.ai",
     ],
+    // Allow dynamic Cloudflare R2 signed URLs returned by the image-generation API
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.cloudflarestorage.com',
+      },
+    ],
   },
 }
 

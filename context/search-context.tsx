@@ -10,7 +10,7 @@
 
 import * as React from "react"
 import { useDeepseekApi } from "@/lib/use-deepseek-api"
-import type { Recipe } from "@/components/recipe-card"
+import type { Recipe, StorePrice } from "@/components/recipe-card"
 
 /**
  * Interface defining the shape of the search context
@@ -27,6 +27,8 @@ interface SearchContextType {
   setSelectedFilters: (filters: string[]) => void
   performSearch: (searchQuery: string) => Promise<void>
   getRecipeById: (id: string) => Recipe | undefined
+  updateRecipeImage: (id: string, imageUrl: string) => void
+  updateRecipeStores: (id: string, storePrices: StorePrice[]) => void
 }
 
 /**
@@ -44,6 +46,8 @@ const SearchContext = React.createContext<SearchContextType>({
   setSelectedFilters: () => {},
   performSearch: async () => {},
   getRecipeById: () => undefined,
+  updateRecipeImage: () => {},
+  updateRecipeStores: () => {},
 })
 
 /**
@@ -171,6 +175,14 @@ export function SearchProvider({ children }: SearchProviderProps) {
     [searchRecipes, parseRecipeData, selectedFilters, handlePartialResults],
   )
 
+  const updateRecipeImage = React.useCallback((id: string, imageUrl: string) => {
+    setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, imageUrl } : r)))
+  }, [])
+
+  const updateRecipeStores = React.useCallback((id: string, storePrices: StorePrice[]) => {
+    setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, storePrices } : r)))
+  }, [])
+
   const value = React.useMemo(
     () => ({
       searchQuery,
@@ -184,6 +196,8 @@ export function SearchProvider({ children }: SearchProviderProps) {
       setSelectedFilters,
       performSearch,
       getRecipeById,
+      updateRecipeImage,
+      updateRecipeStores,
     }),
     [
       searchQuery,
@@ -197,6 +211,8 @@ export function SearchProvider({ children }: SearchProviderProps) {
       setSelectedFilters,
       performSearch,
       getRecipeById,
+      updateRecipeImage,
+      updateRecipeStores,
     ],
   )
 

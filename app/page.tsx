@@ -22,7 +22,6 @@
  * - Contexts provide state management across components
  * - Metadata type from Next.js for page-specific meta tags
  */
-import { SearchProvider } from "@/context/search-context"
 import { SearchBar } from "@/components/search-bar"
 import { SearchResults } from "@/components/search-results"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -75,7 +74,6 @@ export const metadata: Metadata = {
  */
 export default function SearchPage() {
   return (
-    <SearchProvider>
       <UIProvider>
         {/* Theme Toggle Component
            Purpose: Allow users to switch between light/dark modes
@@ -117,6 +115,5 @@ export default function SearchPage() {
           </div>
         </main>
       </UIProvider>
-    </SearchProvider>
   )
 }

@@ -226,7 +226,7 @@ export async function POST(req: Request) {
       const messages = [
         {
           role: "system",
-          content: `Generate 3 recipes matching user criteria. Format as JSON array:
+          content: `Generate 3 meal-prep recipes matching user criteria. Format as JSON array:
 [
   {
     "id": "1",
@@ -242,7 +242,7 @@ export async function POST(req: Request) {
         },
         {
           role: "user",
-          content: `Generate 3 recipes for: ${query}`,
+          content: `Generate 3 meal-prep recipes for: ${query}`,
         },
       ]
 
