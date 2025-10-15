@@ -1,0 +1,41 @@
+# Core Speech Recognition
+openai-whisper>=20231117
+torch>=2.0.0
+torchaudio>=2.0.0
+
+# Audio Processing
+pyaudio>=0.2.13
+sounddevice>=0.4.6
+numpy>=1.24.0
+scipy>=1.11.0
+
+# Speaker Diarization
+pyannote.audio>=3.1.0
+resemblyzer>=0.1.1.dev0
+
+# Voice Activity Detection
+webrtcvad>=2.0.10
+
+# NLP and Post-Processing
+spacy>=3.7.0
+transformers>=4.35.0
+
+# UI Framework
+streamlit>=1.28.0
+flask>=3.0.0
+
+# Export Formats
+python-docx>=1.1.0
+reportlab>=4.0.7
+fpdf2>=2.7.6
+
+# Utilities
+python-dotenv>=1.0.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Development
+pytest>=7.4.3
+pytest-asyncio>=0.21.1
+black>=23.11.0
+mypy>=1.7.0
