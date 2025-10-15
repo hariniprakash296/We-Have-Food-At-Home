@@ -1,0 +1,183 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║                                                                      ║
+║       🎤 REAL-TIME MEETING TRANSCRIBER - QUICK START GUIDE 🎤       ║
+║                                                                      ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+This is a complete, self-contained transcription system with <3s latency.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 INSTALLATION (5 minutes):
+
+1. Navigate to module:
+   cd transcription-module
+
+2. Create virtual environment:
+   python -m venv venv
+   
+3. Activate it:
+   # macOS/Linux:
+   source venv/bin/activate
+   
+   # Windows:
+   venv\Scripts\activate
+
+4. Install dependencies:
+   pip install -r requirements.txt
+   
+5. Download language model:
+   python -m spacy download en_core_web_sm
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🚀 USAGE OPTIONS:
+
+┌─ Option 1: Streamlit Web UI (Recommended) ────────────────────────┐
+│                                                                    │
+│   streamlit run src/streamlit_app.py                             │
+│                                                                    │
+│   → Opens in browser at http://localhost:8501                     │
+│   → Real-time transcription display                               │
+│   → Interactive controls                                          │
+│   → Export functionality                                          │
+└────────────────────────────────────────────────────────────────────┘
+
+┌─ Option 2: Flask REST API ────────────────────────────────────────┐
+│                                                                    │
+│   python src/flask_app.py                                        │
+│                                                                    │
+│   → Opens at http://localhost:5000                                │
+│   → REST API endpoints                                            │
+│   → Web interface                                                 │
+└────────────────────────────────────────────────────────────────────┘
+
+┌─ Option 3: Command Line Interface ────────────────────────────────┐
+│                                                                    │
+│   # List audio devices                                            │
+│   python run.py devices                                          │
+│                                                                    │
+│   # Real-time transcription                                       │
+│   python run.py realtime --duration 60 --model base              │
+│                                                                    │
+│   # Transcribe audio file                                         │
+│   python run.py transcribe meeting.wav transcript.docx           │
+│                                                                    │
+│   # Start UI                                                      │
+│   python run.py ui                                               │
+└────────────────────────────────────────────────────────────────────┘
+
+┌─ Option 4: Python API ─────────────────────────────────────────────┐
+│                                                                    │
+│   from src import TranscriptionEngine, AudioCapture              │
+│                                                                    │
+│   # Initialize                                                    │
+│   engine = TranscriptionEngine(model_size="base")                │
+│   audio = AudioCapture()                                         │
+│                                                                    │
+│   # Start transcription                                           │
+│   engine.start()                                                 │
+│   audio.start_capture(callback=engine.process_audio)            │
+│                                                                    │
+│   # ... record for desired duration ...                          │
+│                                                                    │
+│   # Stop and export                                               │
+│   audio.stop_capture()                                           │
+│   engine.stop()                                                  │
+│   engine.export_transcript("meeting.docx", "docx")               │
+└────────────────────────────────────────────────────────────────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨ KEY FEATURES:
+
+  ✓ Real-time transcription (2.5s latency)
+  ✓ Multi-speaker support (up to 10 speakers)
+  ✓ Speaker identification
+  ✓ Error correction (grammar, spelling)
+  ✓ Export: TXT, DOCX, PDF, JSON
+  ✓ GPU acceleration support
+  ✓ Privacy-focused (local processing)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📚 DOCUMENTATION:
+
+  README.md                - Overview and features
+  docs/SETUP_GUIDE.md     - Detailed installation
+  docs/ARCHITECTURE.md    - Technical documentation
+  INTEGRATION.md          - Repository integration
+  IMPLEMENTATION_SUMMARY  - Complete overview
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚙️ CONFIGURATION:
+
+Edit .env file to customize:
+
+  WHISPER_MODEL_SIZE=base     # tiny, base, small, medium, large
+  USE_GPU=true                # Enable GPU acceleration
+  LATENCY_TARGET=2.5          # Target latency in seconds
+  ENABLE_SPEAKER_DIARIZATION=true
+  ENABLE_ERROR_CORRECTION=true
+  DEFAULT_EXPORT_FORMAT=docx
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🆘 TROUBLESHOOTING:
+
+Issue: "No module named 'pyaudio'"
+→ Install PortAudio first, then: pip install pyaudio
+
+Issue: Slow transcription
+→ Use smaller model: WHISPER_MODEL_SIZE=tiny
+→ Enable GPU: USE_GPU=true
+
+Issue: Poor accuracy
+→ Use larger model: WHISPER_MODEL_SIZE=medium
+→ Enable error correction: ENABLE_ERROR_CORRECTION=true
+
+See docs/SETUP_GUIDE.md for more troubleshooting.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🧪 TESTING:
+
+Run tests:
+  pytest tests/ -v
+
+Run examples:
+  python examples.py
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 TYPICAL WORKFLOW:
+
+1. Start Streamlit UI:
+   streamlit run src/streamlit_app.py
+
+2. Click "Start Transcription"
+
+3. Speak or play audio
+
+4. Watch real-time transcription
+
+5. Click "Stop Transcription"
+
+6. Export to desired format (TXT, DOCX, PDF, JSON)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 TIPS:
+
+→ For fastest transcription: Use "tiny" model
+→ For best accuracy: Use "medium" or "large" model
+→ For real-time: Keep latency at 2-3 seconds
+→ For post-processing: Enable error correction
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Ready to transcribe! 🎤
+
+For detailed documentation, see README.md and docs/ directory.
+
